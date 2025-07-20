@@ -4,6 +4,7 @@ import schedule
 import time
 from datetime import datetime
 import google.generativeai as genai
+from bs4 import BeautifulSoup
 
 # 🔐 Gemini API 키 설정 (직접 입력 or 환경 변수)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -50,11 +51,29 @@ def generate_summary():
         print("❌ Gemini 호출 오류:", str(e))
         return f"❌ Gemini 호출 오류: {str(e)}"
 
+def get_news_titles_links():
+    url = "https://search.naver.com/search.naver?where=news&query=펄어비스"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
+        items = soup.select("a.news_tit")
+        news_list = []
+        for item in items[:5]:  # 상위 5개 뉴스
+            title = item.get("title")
+            link = item.get("href")
+            news_list.append(f"- [{title}]({link})")
+        return "\n".join(news_list)
+    except Exception as e:
+        return f"❌ 뉴스 크롤링 오류: {str(e)}"
+
 # 📦 요약 생성 후 전송 함수
 def send_summary():
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 요약 생성 시작")
     summary = generate_summary()
-    send_telegram_message("📈 펄어비스 요약 리포트\n\n" + summary)
+    news = get_news_titles_links()
+    full_message = "📈 펄어비스 요약 리포트\n\n" + summary + "\n\n📰 관련 뉴스 요약:\n" + news
+    send_telegram_message(full_message)    
 
 # 🗓️ 스케줄 등록 (주중 14:00)
 schedule.every().monday.at("14:00").do(send_summary)
