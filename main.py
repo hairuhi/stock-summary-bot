@@ -41,7 +41,7 @@ def generate_summary():
     """
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("models/gemini-1.5-pro")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -125,7 +125,6 @@ schedule.every().friday.at("14:00").do(send_summary)
 
 # ▶️ 실행 루프 시작
 print("⏳ 스케줄러 작동 중...")
-send_summary()
 while True:
     schedule.run_pending()
     time.sleep(10)
