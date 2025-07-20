@@ -3,13 +3,13 @@ import requests
 import schedule
 import time
 from datetime import datetime
-import google.generativeai as genai
 from bs4 import BeautifulSoup
+import google.generativeai as genai
 
-# 🔐 Gemini API 키 설정 (직접 입력 or 환경 변수)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID")
+# 🔐 API 키 직접 입력
+GEMINI_API_KEY = "여기에_진짜_키_입력"
+TELEGRAM_BOT_TOKEN = "여기에_진짜_토큰_입력"
+TELEGRAM_USER_ID = "여기에_진짜_유저ID_입력"
 
 # 🤖 텔레그램 메시지 전송 함수
 def send_telegram_message(message):
@@ -24,56 +24,97 @@ def send_telegram_message(message):
     except Exception as e:
         print("❌ 텔레그램 전송 오류:", str(e))
 
-# 📋 Gemini 프롬프트
-prompt = """
-[펄어비스]의 주식에 대해 오늘 기준으로 아래 정보를 요약해줘:
-
-1. 금일 주가 변동
-2. 최근 게임 출시나 업데이트, 실적 발표, 주주총회 등 주요 내부 이슈
-3. 단기 흐름 (1주~1개월)
-4. 장기 흐름 (3개월 이상)
-5. 매도 타이밍으로 적절한지에 대한 코멘트
-
-투자자가 55,800원에 35주를 매수한 상태이고, 손해는 피하고 싶지만,  
-조금 손해 보더라도 좋은 타이밍에 다른 주식으로 갈아타는 것도 고려 중이라는 전제야.  
-기술적 분석 + 뉴스 흐름 기반으로 조언해줘.
-"""
-
 # 🧠 Gemini 요약 생성 함수
 def generate_summary():
+    prompt = """
+    [펄어비스]의 주식에 대해 오늘 기준으로 아래 정보를 요약해줘:
+
+    1. 금일 주가 변동
+    2. 최근 게임 출시나 업데이트, 실적 발표, 주주총회 등 주요 내부 이슈
+    3. 단기 흐름 (1주~1개월)
+    4. 장기 흐름 (3개월 이상)
+    5. 매도 타이밍으로 적절한지에 대한 코멘트
+
+    투자자가 55,800원에 35주를 매수한 상태이고, 손해는 피하고 싶지만,  
+    조금 손해 보더라도 좋은 타이밍에 다른 주식으로 갈아타는 것도 고려 중이라는 전제야.  
+    기술적 분석 + 뉴스 흐름 기반으로 조언해줘.
+    """
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-pro")
+        model = genai.GenerativeModel("models/gemini-1.5-pro")
         response = model.generate_content(prompt)
-        print("📋 Gemini 응답:", response.text)
         return response.text
     except Exception as e:
-        print("❌ Gemini 호출 오류:", str(e))
         return f"❌ Gemini 호출 오류: {str(e)}"
 
-def get_news_titles_links():
-    url = "https://search.naver.com/search.naver?where=news&query=펄어비스"
-    headers = {"User-Agent": "Mozilla/5.0"}
+# 📰 관련 뉴스 크롤링
+def get_related_news():
     try:
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.text, "html.parser")
-        items = soup.select("a.news_tit")
-        news_list = []
-        for item in items[:5]:  # 상위 5개 뉴스
-            title = item.get("title")
-            link = item.get("href")
-            news_list.append(f"- [{title}]({link})")
-        return "\n".join(news_list)
+        url = "https://search.naver.com/search.naver?where=news&query=펄어비스"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, headers=headers)
+        soup = BeautifulSoup(res.text, "html.parser")
+        items = soup.select(".news_area")[:3]
+
+        result = "\n📌 관련 뉴스 요약:\n"
+        for item in items:
+            title = item.select_one("a.news_tit")
+            if title:
+                result += f"- {title.text.strip()}\n  👉 {title['href']}\n"
+        return result
     except Exception as e:
         return f"❌ 뉴스 크롤링 오류: {str(e)}"
 
-# 📦 요약 생성 후 전송 함수
+# 📊 포트폴리오 요약 함수
+def portfolio_summary():
+    stock_name = "펄어비스"
+    stock_code = "263750"
+    buy_price = 55800
+    quantity = 35
+
+    current_price = get_current_price(stock_code)
+    if not current_price:
+        return "❌ 현재 주가를 가져오지 못했어"
+
+    total_investment = buy_price * quantity
+    current_value = current_price * quantity
+    profit = current_value - total_investment
+    profit_percent = (profit / total_investment) * 100
+
+    result = f"""📊 포트폴리오 요약
+
+- 종목: {stock_name} ({stock_code})
+- 매입가: {buy_price:,}원
+- 수량: {quantity}주
+- 현재가: {current_price:,}원
+- 손익: {profit:+,}원 ({profit_percent:+.1f}%)
+"""
+    return result
+
+# 🧾 현재 주가 가져오기
+def get_current_price(stock_code):
+    try:
+        url = f"https://finance.naver.com/item/main.nhn?code={stock_code}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, headers=headers)
+        soup = BeautifulSoup(res.text, "html.parser")
+        price_tag = soup.select_one(".no_today .blind")
+        if price_tag:
+            price_str = price_tag.text.replace(",", "")
+            return int(price_str)
+    except:
+        pass
+    return None
+
+# 📦 전체 통합 전송 함수
 def send_summary():
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 요약 생성 시작")
     summary = generate_summary()
-    news = get_news_titles_links()
-    full_message = "📈 펄어비스 요약 리포트\n\n" + summary + "\n\n📰 관련 뉴스 요약:\n" + news
-    send_telegram_message(full_message)    
+    news = get_related_news()
+    portfolio = portfolio_summary()
+
+    message = "📈 펄어비스 요약 리포트\n\n" + summary + "\n" + news + "\n" + portfolio
+    send_telegram_message(message)
 
 # 🗓️ 스케줄 등록 (주중 14:00)
 schedule.every().monday.at("14:00").do(send_summary)
