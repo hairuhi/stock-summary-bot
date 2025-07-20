@@ -7,9 +7,9 @@ from bs4 import BeautifulSoup
 import google.generativeai as genai
 
 # 🔐 API 키 직접 입력
-GEMINI_API_KEY = "여기에_진짜_키_입력"
-TELEGRAM_BOT_TOKEN = "여기에_진짜_토큰_입력"
-TELEGRAM_USER_ID = "여기에_진짜_유저ID_입력"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AIzaSyBEpbthZgrMao3DUNScdp_Ihtil7CqOBso"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or "7976529589:AAExx9SHXu8QUj_KxA4PKsRasvqmuLDDmCM"
+TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID") or "6137638808"
 
 # 🤖 텔레그램 메시지 전송 함수
 def send_telegram_message(message):
