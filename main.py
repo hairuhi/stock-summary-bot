@@ -24,8 +24,8 @@ def send_telegram_message(message):
     except Exception as e:
         print("❌ 텔레그램 전송 오류:", str(e))
 
-# 🧠 Gemini 요약 생성 함수
-def generate_summary():
+# 🧠 펄어비스 GPT 요약 생성 함수
+def generate_perlabis_summary():
     prompt = """
     [펄어비스]의 주식에 대해 오늘 기준으로 아래 정보를 요약해줘:
 
@@ -41,13 +41,34 @@ def generate_summary():
     """
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"❌ Gemini 호출 오류: {str(e)}"
 
-# 📰 관련 뉴스 크롤링
+# 🧠 인기 게임주 간단 요약
+GAME_STOCKS = ["엔씨소프트", "넥슨게임즈", "크래프톤", "위메이드", "컴투스"]
+
+def generate_game_stock_summary():
+    prompt = f"""
+    아래 {len(GAME_STOCKS)}개 게임주에 대해 오늘 기준으로 간단히 요약해줘:
+
+    - 주가 등락 (전일 대비)
+    - 시장 반응이나 뉴스 키워드
+    - 1~2줄 분석 요약
+
+    종목 리스트: {', '.join(GAME_STOCKS)}
+    """
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"❌ 게임주 요약 오류: {str(e)}"
+
+# 📰 관련 뉴스 크롤링 (펄어비스)
 def get_related_news():
     try:
         url = "https://search.naver.com/search.naver?where=news&query=펄어비스"
@@ -109,18 +130,24 @@ def get_current_price(stock_code):
 # 📦 전체 통합 전송 함수
 def send_summary():
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 요약 생성 시작")
-    summary = generate_summary()
+    perlabis = generate_perlabis_summary()
     news = get_related_news()
     portfolio = portfolio_summary()
+    game_summary = generate_game_stock_summary()
 
-    message = "📈 펄어비스 요약 리포트\n\n" + summary + "\n" + news + "\n" + portfolio
+    message = f"📈 펄어비스 요약 리포트\n\n{perlabis}\n{news}\n{portfolio}\n\n🎮 인기 게임주 간단 요약\n{game_summary}"
     send_telegram_message(message)
 
-# 🗓️ 스케줄 등록 (주중 14:00)
+# 🗓️ 스케줄 등록 (주중 09:00 & 14:00)
+schedule.every().monday.at("09:00").do(send_summary)
 schedule.every().monday.at("14:00").do(send_summary)
+schedule.every().tuesday.at("09:00").do(send_summary)
 schedule.every().tuesday.at("14:00").do(send_summary)
+schedule.every().wednesday.at("09:00").do(send_summary)
 schedule.every().wednesday.at("14:00").do(send_summary)
+schedule.every().thursday.at("09:00").do(send_summary)
 schedule.every().thursday.at("14:00").do(send_summary)
+schedule.every().friday.at("09:00").do(send_summary)
 schedule.every().friday.at("14:00").do(send_summary)
 
 # ▶️ 실행 루프 시작
