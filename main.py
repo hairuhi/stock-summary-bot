@@ -152,6 +152,7 @@ schedule.every().friday.at("14:00").do(send_summary)
 
 # ▶️ 실행 루프 시작
 print("⏳ 스케줄러 작동 중...")
+send_summary()
 while True:
     schedule.run_pending()
     time.sleep(10)
