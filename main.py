@@ -138,17 +138,17 @@ def send_summary():
     message = f"📈 펄어비스 요약 리포트\n\n{perlabis}\n{news}\n{portfolio}\n\n🎮 인기 게임주 간단 요약\n{game_summary}"
     send_telegram_message(message)
 
-# 🗓️ 스케줄 등록 (주중 09:00 & 14:00)
-schedule.every().monday.at("09:00").do(send_summary)
-schedule.every().monday.at("14:00").do(send_summary)
-schedule.every().tuesday.at("09:00").do(send_summary)
-schedule.every().tuesday.at("14:00").do(send_summary)
-schedule.every().wednesday.at("09:00").do(send_summary)
-schedule.every().wednesday.at("14:00").do(send_summary)
-schedule.every().thursday.at("09:00").do(send_summary)
-schedule.every().thursday.at("14:00").do(send_summary)
-schedule.every().friday.at("09:00").do(send_summary)
-schedule.every().friday.at("14:00").do(send_summary)
+# 🗓️ 스케줄 등록 (주중 00:30 UTC = 09:30 KST, 05:30 UTC = 14:30 KST)
+schedule.every().monday.at("00:30").do(send_summary)
+schedule.every().monday.at("05:30").do(send_summary)
+schedule.every().tuesday.at("00:30").do(send_summary)
+schedule.every().tuesday.at("05:30").do(send_summary)
+schedule.every().wednesday.at("00:30").do(send_summary)
+schedule.every().wednesday.at("05:30").do(send_summary)
+schedule.every().thursday.at("00:30").do(send_summary)
+schedule.every().thursday.at("05:30").do(send_summary)
+schedule.every().friday.at("00:30").do(send_summary)
+schedule.every().friday.at("05:30").do(send_summary)
 
 # ▶️ 실행 루프 시작
 print("⏳ 스케줄러 작동 중...")
