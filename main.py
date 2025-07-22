@@ -132,7 +132,7 @@ def send_summary():
 # 🗓️ 스케줄 등록 (15:10 KST = 06:10 UTC)
 schedule.every().monday.at("00:00").do(send_summary)
 schedule.every().monday.at("06:00").do(send_summary)
-schedule.every().tuesday.at("01:15").do(send_summary)
+schedule.every().tuesday.at("02:10").do(send_summary)
 schedule.every().tuesday.at("06:00").do(send_summary)
 schedule.every().wednesday.at("00:00").do(send_summary)
 schedule.every().wednesday.at("06:00").do(send_summary)
