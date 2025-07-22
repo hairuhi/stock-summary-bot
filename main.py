@@ -130,11 +130,16 @@ def send_summary():
     send_telegram_message(message)
 
 # 🗓️ 스케줄 등록 (15:10 KST = 06:10 UTC)
-schedule.every().monday.at("06:10").do(send_summary)
-schedule.every().tuesday.at("06:10").do(send_summary)
-schedule.every().wednesday.at("06:10").do(send_summary)
-schedule.every().thursday.at("06:10").do(send_summary)
-schedule.every().friday.at("06:10").do(send_summary)
+schedule.every().monday.at("00:00").do(send_summary)
+schedule.every().monday.at("06:00").do(send_summary)
+schedule.every().tuesday.at("01:15").do(send_summary)
+schedule.every().tuesday.at("06:00").do(send_summary)
+schedule.every().wednesday.at("00:00").do(send_summary)
+schedule.every().wednesday.at("06:00").do(send_summary)
+schedule.every().thursday.at("00:00").do(send_summary)
+schedule.every().thursday.at("06:00").do(send_summary)
+schedule.every().friday.at("00:00").do(send_summary)
+schedule.every().friday.at("06:00").do(send_summary)
 
 # ▶️ 실행 루프 시작
 print("⏳ 스케줄러 작동 중...")
