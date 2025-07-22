@@ -38,7 +38,7 @@ def get_related_news():
             title = item.select_one("a.news_tit")
             if title:
                 result += f"- {title.text.strip()}\n  👉 {title['href']}\n"
-        return result
+        return result if result else "관련 뉴스 없음"
     except Exception as e:
         return f"❌ 뉴스 크롤링 오류: {str(e)}"
 
@@ -87,15 +87,18 @@ def portfolio_summary(current_price):
 # 🧠 펄어비스 GPT 요약 생성 함수
 def generate_perlabis_summary(current_price, news_text):
     today = datetime.now().strftime("%Y년 %m월 %d일")
+    price_info = f"{current_price}원" if current_price else "알 수 없음"
+    news_info = news_text if news_text else "관련 뉴스 없음"
+
     prompt = f"""
 [펄어비스] 주식에 대해 아래 정보를 바탕으로 투자 요약을 해줘.
 
 📅 날짜: {today}
-📈 현재 주가: {current_price}원
+📈 현재 주가: {price_info}
 📉 매입 단가: 55,800원, 수량: 35주
 
 📰 관련 뉴스:
-{news_text}
+{news_info}
 
 ✅ 아래 항목을 포함해줘:
 1. 금일 주가 변동
@@ -114,50 +117,6 @@ def generate_perlabis_summary(current_price, news_text):
     except Exception as e:
         return f"❌ Gemini 호출 오류: {str(e)}"
 
-# 🎮 인기 게임주 주가 및 뉴스 가져오기
-def get_game_stock_data():
-    stock_map = {
-        "엔씨소프트": "036570",
-        "넥슨게임즈": "225570",
-        "크래프톤": "259960",
-        "위메이드": "112040",
-        "컴투스": "078340",
-    }
-    stock_info = []
-
-    for name, code in stock_map.items():
-        price, diff = get_current_price(code)
-        news_url = f"https://search.naver.com/search.naver?where=news&query={name}"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        res = requests.get(news_url, headers=headers)
-        soup = BeautifulSoup(res.text, "html.parser")
-        news_items = soup.select(".news_area")[:1]
-        news_summary = ""
-        for item in news_items:
-            title = item.select_one("a.news_tit")
-            if title:
-                news_summary += f"- {title.text.strip()} ({title['href']})"
-        stock_info.append((name, price, diff, news_summary))
-    return stock_info
-
-# 🎮 게임주 요약 생성
-def generate_game_stock_summary():
-    stock_data = get_game_stock_data()
-    today = datetime.now().strftime("%Y년 %m월 %d일")
-
-    prompt = f"오늘({today}) 기준으로 국내 게임주 5종목의 주가와 뉴스 기반 요약을 해줘:\n"
-    for name, price, diff, news in stock_data:
-        prompt += f"\n{name}:\n- 주가: {price}원 ({diff})\n- 뉴스: {news}"
-    prompt += "\n\n각 종목에 대해 1~2줄 요약 분석도 함께 제공해줘."
-
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("models/gemini-1.5-flash")
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"❌ 게임주 요약 오류: {str(e)}"
-
 # 📦 전체 통합 전송 함수
 def send_summary():
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 요약 생성 시작")
@@ -166,21 +125,15 @@ def send_summary():
     news_text = get_related_news()
     perlabis = generate_perlabis_summary(current_price, news_text)
     portfolio = portfolio_summary(current_price)
-    game_summary = generate_game_stock_summary()
 
-    message = f"📈 펄어비스 요약 리포트\n\n{perlabis}\n\n{portfolio}\n\n🎮 인기 게임주 간단 요약\n{game_summary}"
+    message = f"📈 펄어비스 요약 리포트\n\n{perlabis}\n\n{portfolio}"
     send_telegram_message(message)
 
-# 🗓️ 스케줄 등록 (주중 00:30 UTC = 09:30 KST, 06:10 UTC = 15:10 KST)
-schedule.every().monday.at("00:30").do(send_summary)
-schedule.every().monday.at("06:15").do(send_summary)
-schedule.every().tuesday.at("00:30").do(send_summary)
+# 🗓️ 스케줄 등록 (15:10 KST = 06:10 UTC)
+schedule.every().monday.at("06:10").do(send_summary)
 schedule.every().tuesday.at("06:10").do(send_summary)
-schedule.every().wednesday.at("00:30").do(send_summary)
 schedule.every().wednesday.at("06:10").do(send_summary)
-schedule.every().thursday.at("00:30").do(send_summary)
 schedule.every().thursday.at("06:10").do(send_summary)
-schedule.every().friday.at("00:30").do(send_summary)
 schedule.every().friday.at("06:10").do(send_summary)
 
 # ▶️ 실행 루프 시작
