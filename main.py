@@ -4,6 +4,7 @@ import schedule
 import time
 from datetime import datetime
 from bs4 import BeautifulSoup
+from zoneinfo import ZoneInfo
 import google.generativeai as genai
 
 # 🔐 API 키 직접 입력
@@ -15,6 +16,8 @@ TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID") or "6137638808"
 STOCKS = {
     "펄어비스": {"code": "263750", "buy_price": 55800, "quantity": 35},
     "한미반도체": {"code": "042700", "buy_price": 103500, "quantity": 10},
+    "삼성전자": {"code": "005930", "buy_price": 70000, "quantity": 20},
+    "현대차": {"code": "005380", "buy_price": 250000, "quantity": 15},
 }
 
 # 텔레그램 메시지 전송
@@ -44,7 +47,7 @@ def get_related_news(stock_name):
     except Exception as e:
         return f"❌ 뉴스 오류: {str(e)}"
 
-# 주가 가져오기
+# 현재가 크롤링
 def get_current_price(stock_code):
     try:
         url = f"https://finance.naver.com/item/main.nhn?code={stock_code}"
@@ -53,8 +56,7 @@ def get_current_price(stock_code):
         soup = BeautifulSoup(res.text, "html.parser")
         price_tag = soup.select_one(".no_today .blind")
         if price_tag:
-            price = int(price_tag.text.replace(",", ""))
-            return price
+            return int(price_tag.text.replace(",", ""))
     except:
         pass
     return None
@@ -73,27 +75,22 @@ def portfolio_summary(name, current_price, buy_price, quantity):
 - 손익: {profit:+,}원 ({profit_pct:+.1f}%)
 """
 
-# GPT 요약
+# GPT 요약 (2줄 포맷)
 def generate_summary(name, current_price, news, buy_price, quantity):
-    today = datetime.now().strftime("%Y년 %m월 %d일")
+    today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y년 %m월 %d일")
     prompt = f"""
-[{name}] 주식 투자 분석 보고서를 작성해줘.
+[{name}] 주식 리포트를 2줄 요약으로 작성해줘.
 
 📅 날짜: {today}
 📈 현재 주가: {current_price if current_price else "알 수 없음"}원
 📉 매입 단가: {buy_price}원 / 수량: {quantity}주
 
-📰 최근 뉴스:
+📰 관련 뉴스:
 {news}
 
-✅ 아래 항목을 포함해서 초보 투자자도 이해할 수 있게 설명해줘:
-1. 금일 주가 변동 해석
-2. 최근 주요 이슈 요약
-3. 단기 흐름 (1주~1개월)
-4. 장기 흐름 (3개월 이상)
-5. 업계 내 위치 및 강점
-6. 주요 리스크 또는 약점
-7. 매수/매도 타이밍 코멘트
+✅ 출력 예시:
+1. 오늘 주가 흐름 + 주요 뉴스 핵심
+2. 단기/장기 흐름 + 매수매도 코멘트
 """
     try:
         genai.configure(api_key=GEMINI_API_KEY)
@@ -103,7 +100,7 @@ def generate_summary(name, current_price, news, buy_price, quantity):
     except Exception as e:
         return f"❌ Gemini 오류: {str(e)}"
 
-# 전체 리포트 생성 및 전송
+# 전체 리포트
 def send_full_report():
     print(f"📤 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 리포트 생성 시작")
     message = "📈 오늘의 주식 요약 리포트\n\n"
@@ -117,14 +114,19 @@ def send_full_report():
 
     send_telegram_message(message)
 
-# 스케줄 등록 (KST 기준: 9시/12시/15시30분 = UTC 기준: 00:00/03:00/06:30)
-for day in ["monday", "tuesday", "wednesday", "thursday", "friday"]:
-    getattr(schedule.every(), day).at("00:00").do(send_full_report)
-    getattr(schedule.every(), day).at("03:00").do(send_full_report)
-    getattr(schedule.every(), day).at("06:30").do(send_full_report)
+# 스케줄 등록 (KST 기준: 9시, 12시, 15시30분)
+def kst_schedule(time_str, func):
+    def wrapper():
+        if datetime.now(ZoneInfo("Asia/Seoul")).strftime("%H:%M") == time_str:
+            func()
+    schedule.every(1).minutes.do(wrapper)
 
-# 루프 시작
+for t in ["09:00", "12:00", "15:30"]:
+    kst_schedule(t, send_full_report)
+
+# 루프
 print("⏳ 스케줄러 작동 중...")
+send_full_report()
 while True:
     schedule.run_pending()
     time.sleep(10)
