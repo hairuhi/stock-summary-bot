@@ -124,9 +124,11 @@ def kst_schedule(time_str, func):
 for t in ["09:00", "12:00", "15:30"]:
     kst_schedule(t, send_full_report)
 
+# 루프 시작 전 테스트
+send_full_report()  # ✅ 테스트용 메시지 전송
+
 # 루프
 print("⏳ 스케줄러 작동 중...")
-send_full_report()
 while True:
     schedule.run_pending()
     time.sleep(10)
