@@ -61,6 +61,25 @@ def get_current_price(stock_code):
         pass
     return None
 
+# 📊 포트폴리오 요약 함수 (이 위치에 넣어줘요!)
+def portfolio_summary(name, current_price, buy_price, quantity):
+    if not current_price:
+        return "❌ 주가 정보 없음"
+    
+    # 🔐 0 나눗셈 방지: 아직 매수 안 한 종목 처리
+    if buy_price == 0 or quantity == 0:
+        return "📌 아직 매수하지 않은 종목이에요!"
+
+    total_cost = buy_price * quantity
+    current_value = current_price * quantity
+    profit = current_value - total_cost
+    profit_pct = (profit / total_cost) * 100
+    return f"""📊 [{name} 포트폴리오 요약]
+- 매입가: {buy_price:,}원 / 수량: {quantity}주
+- 현재가: {current_price:,}원
+- 손익: {profit:+,}원 ({profit_pct:+.1f}%)
+"""
+
 # 포트폴리오 요약
 def portfolio_summary(name, current_price, buy_price, quantity):
     if not current_price:
