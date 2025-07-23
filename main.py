@@ -15,9 +15,9 @@ TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID") or "6137638808"
 # 📌 종목 설정
 STOCKS = {
     "펄어비스": {"code": "263750", "buy_price": 55800, "quantity": 35},
-    "한미반도체": {"code": "042700", "buy_price": , "quantity": },
-    "삼성전자": {"code": "005930", "buy_price": , "quantity": },
-    "현대차": {"code": "005380", "buy_price": , "quantity": },
+    "한미반도체": {"code": "042700", "buy_price": 0, "quantity": 0},
+    "삼성전자": {"code": "005930", "buy_price": 0, "quantity": 0},
+    "현대차": {"code": "005380", "buy_price": 0, "quantity": 0},
 }
 
 # 텔레그램 메시지 전송
