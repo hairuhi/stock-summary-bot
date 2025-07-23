@@ -7,10 +7,10 @@ from bs4 import BeautifulSoup
 from zoneinfo import ZoneInfo
 import google.generativeai as genai
 
-# 🔐 API 키 직접 입력
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AIzaSyBEpbthZgrMao3DUNScdp_Ihtil7CqOBso"
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or "7976529589:AAExx9SHXu8QUj_KxA4PKsRasvqmuLDDmCM"
-TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID") or "6137638808"
+# 🔐 API 키 입력
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "여기에_키_입력"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or "여기에_봇_토큰_입력"
+TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID") or "여기에_유저_ID_입력"
 
 # 📌 종목 설정
 STOCKS = {
@@ -20,7 +20,7 @@ STOCKS = {
     "현대차": {"code": "005380", "buy_price": 0, "quantity": 0},
 }
 
-# 텔레그램 메시지 전송
+# 텔레그램 전송
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     data = {"chat_id": TELEGRAM_USER_ID, "text": message}
@@ -61,40 +61,29 @@ def get_current_price(stock_code):
         pass
     return None
 
-# 📊 포트폴리오 요약 함수 (이 위치에 넣어줘요!)
-def portfolio_summary(name, current_price, buy_price, quantity):
-    if not current_price:
-        return "❌ 주가 정보 없음"
-    
-    # 🔐 0 나눗셈 방지: 아직 매수 안 한 종목 처리
-    if buy_price == 0 or quantity == 0:
-        return "📌 아직 매수하지 않은 종목이에요!"
-
-    total_cost = buy_price * quantity
-    current_value = current_price * quantity
-    profit = current_value - total_cost
-    profit_pct = (profit / total_cost) * 100
-    return f"""📊 [{name} 포트폴리오 요약]
-- 매입가: {buy_price:,}원 / 수량: {quantity}주
-- 현재가: {current_price:,}원
-- 손익: {profit:+,}원 ({profit_pct:+.1f}%)
-"""
-
 # 포트폴리오 요약
 def portfolio_summary(name, current_price, buy_price, quantity):
     if not current_price:
         return "❌ 주가 정보 없음"
-    total_cost = buy_price * quantity
-    current_value = current_price * quantity
-    profit = current_value - total_cost
-    profit_pct = (profit / total_cost) * 100
-    return f"""📊 [{name} 포트폴리오 요약]
+    
+    try:
+        total_cost = buy_price * quantity
+        if total_cost == 0:
+            return "📌 아직 매수하지 않은 종목이에요!"
+        
+        current_value = current_price * quantity
+        profit = current_value - total_cost
+        profit_pct = (profit / total_cost) * 100
+
+        return f"""📊 [{name} 포트폴리오 요약]
 - 매입가: {buy_price:,}원 / 수량: {quantity}주
 - 현재가: {current_price:,}원
 - 손익: {profit:+,}원 ({profit_pct:+.1f}%)
 """
+    except Exception as e:
+        return f"❌ 포트폴리오 계산 오류: {str(e)}"
 
-# GPT 요약 (2줄 포맷)
+# GPT 요약 (2줄)
 def generate_summary(name, current_price, news, buy_price, quantity):
     today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y년 %m월 %d일")
     prompt = f"""
@@ -119,7 +108,7 @@ def generate_summary(name, current_price, news, buy_price, quantity):
     except Exception as e:
         return f"❌ Gemini 오류: {str(e)}"
 
-# 전체 리포트
+# 전체 리포트 생성
 def send_full_report():
     print(f"📤 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 리포트 생성 시작")
     message = "📈 오늘의 주식 요약 리포트\n\n"
@@ -133,20 +122,21 @@ def send_full_report():
 
     send_telegram_message(message)
 
-# 스케줄 등록 (KST 기준: 9시, 12시, 15시30분)
+# 시간대 스케줄 등록
 def kst_schedule(time_str, func):
     def wrapper():
-        if datetime.now(ZoneInfo("Asia/Seoul")).strftime("%H:%M") == time_str:
+        now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%H:%M")
+        if now == time_str:
             func()
     schedule.every(1).minutes.do(wrapper)
 
 for t in ["09:00", "12:00", "15:30"]:
     kst_schedule(t, send_full_report)
 
-# 루프 시작 전 테스트
-send_full_report()  # ✅ 테스트용 메시지 전송
+# ✅ 테스트용 메시지 (한 번만 전송)
+send_full_report()
 
-# 루프
+# ⏳ 루프 시작
 print("⏳ 스케줄러 작동 중...")
 while True:
     schedule.run_pending()
